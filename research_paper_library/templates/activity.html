@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}Activity Audit Log - ScholarGraph{% endblock %}
+
+{% block content %}
+<div class="activity-page-wrapper">
+    <!-- Header -->
+    <div class="activity-header-card">
+        <div class="activity-header-left">
+            <div class="page-title-group">
+                <i class="fa-solid fa-clock-rotate-left text-primary"></i>
+                <h2>System Activity Audit Log</h2>
+            </div>
+            <p class="subtitle">Comprehensive audit trail recording all user events, paper uploads, metadata edits, tagging operations, and system modifications.</p>
+        </div>
+
+        <div class="activity-header-right">
+            <a href="/api/activity/export" class="btn btn-secondary">
+                <i class="fa-solid fa-file-arrow-down"></i>
+                <span>Export Log (CSV)</span>
+            </a>
+            <button class="btn btn-subtle" onclick="fetchActivityLogs()">
+                <i class="fa-solid fa-rotate"></i>
+                <span>Refresh</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Filters Toolbar -->
+    <div class="activity-filters-card">
+        <div class="filter-row">
+            <div class="filter-item search-item">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" id="activitySearchInput" placeholder="Search activity by paper title, details, or user..." onkeyup="filterActivityDebounced()">
+            </div>
+
+            <div class="filter-item">
+                <label for="activityActionFilter">Action Type:</label>
+                <select id="activityActionFilter" class="form-select" onchange="fetchActivityLogs()">
+                    <option value="">All Actions</option>
+                    <option value="UPLOAD">UPLOAD (Paper Ingest)</option>
+                    <option value="EDIT">EDIT (Metadata Update)</option>
+                    <option value="TAG_ADD">TAG_ADD (Tag Assigned)</option>
+                    <option value="TAG_REMOVE">TAG_REMOVE (Tag Removed)</option>
+                    <option value="REF_ADD">REF_ADD (Citation Added)</option>
+                    <option value="REF_DELETE">REF_DELETE (Citation Removed)</option>
+                    <option value="RE_EXTRACT">RE_EXTRACT (Reparsed PDF)</option>
+                    <option value="DELETE">DELETE (Paper Purged)</option>
+                    <option value="UPLOAD_DUPLICATE">UPLOAD_DUPLICATE (Skipped)</option>
+                    <option value="UPLOAD_FAILED">UPLOAD_FAILED (Rejected)</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- Activity Log Timeline / Table -->
+    <div class="activity-log-container card">
+        <div class="activity-table-wrapper">
+            <table class="activity-table">
+                <thead>
+                    <tr>
+                        <th style="width: 170px;">Timestamp</th>
+                        <th style="width: 130px;">Action</th>
+                        <th style="width: 150px;">User</th>
+                        <th style="width: 280px;">Target Paper</th>
+                        <th>Details & Modifications</th>
+                    </tr>
+                </thead>
+                <tbody id="activityTableBody">
+                    <tr>
+                        <td colspan="5" class="text-center py-4">
+                            <div class="loading-state">
+                                <div class="spinner"></div>
+                                <p>Loading activity logs...</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/activity.js') }}"></script>
+{% endblock %}

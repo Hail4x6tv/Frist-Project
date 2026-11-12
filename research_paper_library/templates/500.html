@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}Internal Server Error - ScholarGraph{% endblock %}
+
+{% block content %}
+<div class="error-container">
+    <div class="error-card card text-center">
+        <div class="error-code text-danger">500</div>
+        <h2>Internal Server Error</h2>
+        <p class="error-msg">{{ message or "An unexpected server error occurred during processing." }}</p>
+        <div class="mt-4">
+            <a href="{{ url_for('index') }}" class="btn btn-primary">
+                <i class="fa-solid fa-house"></i> Return to Library
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

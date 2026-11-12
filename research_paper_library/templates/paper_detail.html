@@ -1,0 +1,247 @@
+{% extends "base.html" %}
+
+{% block title %}{{ paper.title }} - ScholarGraph{% endblock %}
+
+{% block content %}
+<div class="paper-detail-page">
+    <!-- Top Action Breadcrumb & Buttons -->
+    <div class="detail-header-card">
+        <div class="breadcrumb">
+            <a href="{{ url_for('index') }}"><i class="fa-solid fa-arrow-left"></i> Back to Library</a>
+            <span class="sep">/</span>
+            <span class="current">Paper #{{ paper.id }}</span>
+        </div>
+
+        <div class="detail-actions">
+            <a href="{{ url_for('serve_upload', filename=paper.filename) }}" target="_blank" class="btn btn-secondary">
+                <i class="fa-solid fa-file-pdf text-danger"></i>
+                <span>Open Raw PDF</span>
+            </a>
+            <button class="btn btn-secondary" onclick="openEditModalFromDetail()">
+                <i class="fa-solid fa-pen-to-square"></i>
+                <span>Edit Metadata</span>
+            </button>
+            <button class="btn btn-secondary" onclick="reextractCurrentPaper({{ paper.id }})">
+                <i class="fa-solid fa-arrows-rotate"></i>
+                <span>Re-Extract Text</span>
+            </button>
+            <button class="btn btn-danger-subtle" onclick="deleteCurrentPaper({{ paper.id }}, '{{ paper.title | escape }}')">
+                <i class="fa-solid fa-trash-can"></i>
+                <span>Delete</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Two-Column Layout: Details + PDF Viewer -->
+    <div class="detail-content-grid">
+        <!-- Left Column: Extracted Metadata & Knowledge Data -->
+        <div class="detail-info-column">
+            <!-- Paper Header Card -->
+            <div class="card detail-main-card">
+                <div class="detail-badges-row">
+                    {% if paper.publication_year %}
+                    <span class="badge badge-year"><i class="fa-solid fa-calendar"></i> {{ paper.publication_year }}</span>
+                    {% endif %}
+
+                    {% if paper.extraction_status == 'success' %}
+                    <span class="badge badge-success"><i class="fa-solid fa-circle-check"></i> Extracted</span>
+                    {% elif paper.extraction_status == 'partial' %}
+                    <span class="badge badge-warning"><i class="fa-solid fa-triangle-exclamation"></i> Partial Extraction</span>
+                    {% elif paper.extraction_status == 'scanned' %}
+                    <span class="badge badge-amber"><i class="fa-solid fa-camera"></i> Scanned Document</span>
+                    {% else %}
+                    <span class="badge badge-danger"><i class="fa-solid fa-circle-xmark"></i> Failed</span>
+                    {% endif %}
+
+                    <span class="badge badge-neutral"><i class="fa-solid fa-file"></i> {{ paper.page_count }} Pages</span>
+                    <span class="badge badge-neutral">{{ (paper.file_size / 1024)|round(1) }} KB</span>
+                </div>
+
+                <h1 class="detail-title" id="paperTitleHeading">{{ paper.title }}</h1>
+
+                <!-- Authors Row -->
+                <div class="detail-authors-section">
+                    <span class="detail-section-label"><i class="fa-solid fa-users"></i> Authors:</span>
+                    <div class="authors-list" id="authorsListContainer">
+                        {% for a in paper.authors %}
+                        <a href="{{ url_for('index') }}?author={{ a.name }}" class="author-chip">
+                            <i class="fa-solid fa-user-pen"></i>
+                            <span>{{ a.name }}</span>
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                {% if paper.doi %}
+                <div class="detail-meta-line">
+                    <span class="detail-section-label"><i class="fa-solid fa-fingerprint"></i> DOI:</span>
+                    <a href="https://doi.org/{{ paper.doi }}" target="_blank" class="doi-link">{{ paper.doi }} <i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+                </div>
+                {% endif %}
+
+                <div class="detail-meta-line">
+                    <span class="detail-section-label"><i class="fa-solid fa-file-signature"></i> Original File:</span>
+                    <span class="filename-text">{{ paper.original_filename }}</span>
+                </div>
+            </div>
+
+            <!-- Abstract Card -->
+            <div class="card detail-section-card">
+                <div class="card-header">
+                    <h3><i class="fa-solid fa-align-left text-primary"></i> Abstract</h3>
+                </div>
+                <div class="abstract-content" id="abstractContent">
+                    <p>{{ paper.abstract }}</p>
+                </div>
+            </div>
+
+            <!-- Topics & Tags Card -->
+            <div class="card detail-section-card">
+                <div class="card-header space-between">
+                    <h3><i class="fa-solid fa-tags text-amber"></i> Topics & Classification</h3>
+                </div>
+                <div class="topics-tag-cloud" id="topicsContainer">
+                    {% for t in paper.topics %}
+                    <div class="tag-pill {% if t.is_auto %}tag-auto{% else %}tag-manual{% endif %}">
+                        <a href="{{ url_for('index') }}?topic={{ t.name }}" class="tag-name">
+                            <i class="fa-solid fa-hashtag"></i> {{ t.name }}
+                        </a>
+                        <span class="tag-conf" title="Confidence: {{ (t.confidence * 100)|round(0) }}%">
+                            {{ (t.confidence * 100)|round(0) }}%
+                        </span>
+                        <button type="button" class="tag-del-btn" onclick="removeTag({{ paper.id }}, {{ t.id }}, '{{ t.name }}')" title="Remove Tag">&times;</button>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Add New Tag Form -->
+                <div class="add-tag-form">
+                    <input type="text" id="inlineNewTagInput" class="form-input form-input-sm" placeholder="Add custom topic or tag...">
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="addTagInline({{ paper.id }})">
+                        <i class="fa-solid fa-plus"></i> Add Tag
+                    </button>
+                </div>
+            </div>
+
+            <!-- Citations & References Card -->
+            <div class="card detail-section-card">
+                <div class="card-header space-between">
+                    <h3>
+                        <i class="fa-solid fa-quote-right text-purple"></i> 
+                        References (<span id="refCount">{{ paper.references|length }}</span>)
+                    </h3>
+                    <button class="btn btn-subtle btn-sm" onclick="toggleAddRefForm()">
+                        <i class="fa-solid fa-plus"></i> Add Reference
+                    </button>
+                </div>
+
+                <!-- Add Reference Form (collapsible) -->
+                <div class="add-ref-form" id="addRefForm" style="display: none;">
+                    <textarea id="newRefRawText" class="form-textarea" rows="2" placeholder="Paste bibliographic citation e.g. [1] Author, A. 'Title', Journal, 2024..."></textarea>
+                    <div class="form-row">
+                        <input type="text" id="newRefTitle" class="form-input form-input-sm col-half" placeholder="Paper title (optional)">
+                        <input type="number" id="newRefYear" class="form-input form-input-sm col-quarter" placeholder="Year">
+                        <button type="button" class="btn btn-primary btn-sm col-quarter" onclick="submitNewReference({{ paper.id }})">Save</button>
+                    </div>
+                </div>
+
+                <div class="references-list-container">
+                    {% if paper.references %}
+                    <ol class="references-list">
+                        {% for ref in paper.references %}
+                        <li class="reference-item">
+                            <div class="ref-body">
+                                <span class="ref-raw">{{ ref.raw_text }}</span>
+                                {% if ref.matched_paper_id %}
+                                <div class="ref-match-badge">
+                                    <i class="fa-solid fa-link text-success"></i>
+                                    <span>In Library:</span>
+                                    <a href="{{ url_for('paper_detail_view', paper_id=ref.matched_paper_id) }}" class="matched-paper-link">
+                                        {{ ref.matched_paper_title }}
+                                    </a>
+                                </div>
+                                {% endif %}
+                            </div>
+                            <button type="button" class="ref-delete-btn" onclick="deleteReference({{ paper.id }}, {{ ref.id }})" title="Delete reference">&times;</button>
+                        </li>
+                        {% endfor %}
+                    </ol>
+                    {% else %}
+                    <p class="empty-refs-text">No references extracted from this document.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Interactive Embedded PDF Viewer -->
+        <div class="detail-pdf-column">
+            <div class="pdf-viewer-card">
+                <div class="pdf-viewer-header">
+                    <span class="pdf-header-title">
+                        <i class="fa-solid fa-file-pdf text-danger"></i> Document Preview
+                    </span>
+                    <a href="{{ url_for('serve_upload', filename=paper.filename) }}" target="_blank" class="btn-subtle btn-sm">
+                        <i class="fa-solid fa-arrow-up-right-from-square"></i> Fullscreen
+                    </a>
+                </div>
+                <div class="pdf-frame-wrapper">
+                    <iframe src="{{ url_for('serve_upload', filename=paper.filename) }}#toolbar=1" class="pdf-iframe" title="PDF Viewer"></iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Paper Modal (Shared) -->
+<div class="modal-overlay" id="editModal" style="display: none;">
+    <div class="modal-card modal-lg">
+        <div class="modal-header">
+            <div class="modal-title-group">
+                <i class="fa-solid fa-pen-to-square text-primary"></i>
+                <h3>Edit Paper Details</h3>
+            </div>
+            <button class="modal-close" onclick="closeEditModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="editPaperForm" onsubmit="savePaperEdits(event)">
+                <input type="hidden" id="editPaperId" value="{{ paper.id }}">
+                <div class="form-group">
+                    <label for="editTitle" class="form-label">Paper Title *</label>
+                    <input type="text" id="editTitle" class="form-input" value="{{ paper.title | escape }}" required>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group col-half">
+                        <label for="editAuthors" class="form-label">Authors (comma separated) *</label>
+                        <input type="text" id="editAuthors" class="form-input" value="{{ paper.authors | map(attribute='name') | join(', ') | escape }}" required>
+                    </div>
+                    <div class="form-group col-half">
+                        <label for="editYear" class="form-label">Publication Year</label>
+                        <input type="number" id="editYear" class="form-input" min="1900" max="2030" value="{{ paper.publication_year or '' }}">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="editDoi" class="form-label">Digital Object Identifier (DOI)</label>
+                    <input type="text" id="editDoi" class="form-input" value="{{ paper.doi or '' }}">
+                </div>
+
+                <div class="form-group">
+                    <label for="editAbstract" class="form-label">Abstract</label>
+                    <textarea id="editAbstract" class="form-textarea" rows="6">{{ paper.abstract | escape }}</textarea>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+            <button type="button" class="btn btn-primary" onclick="submitPaperEditsFromDetail()">
+                <i class="fa-solid fa-floppy-disk"></i> Save Changes
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/paper_detail.js') }}"></script>
+{% endblock %}

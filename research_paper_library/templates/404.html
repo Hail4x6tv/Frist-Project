@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}Page Not Found - ScholarGraph{% endblock %}
+
+{% block content %}
+<div class="error-container">
+    <div class="error-card card text-center">
+        <div class="error-code">404</div>
+        <h2>Paper or Resource Not Found</h2>
+        <p class="error-msg">{{ message or "The page or research paper you requested does not exist." }}</p>
+        <div class="mt-4">
+            <a href="{{ url_for('index') }}" class="btn btn-primary">
+                <i class="fa-solid fa-house"></i> Return to Library
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

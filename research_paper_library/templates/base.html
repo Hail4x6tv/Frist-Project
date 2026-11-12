@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Research Paper Library & Knowledge Graph{% endblock %}</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="theme-light">
+    <!-- Navigation Header -->
+    <header class="app-header">
+        <div class="header-container">
+            <div class="brand">
+                <a href="{{ url_for('index') }}" class="brand-link">
+                    <div class="brand-icon">
+                        <i class="fa-solid fa-atom"></i>
+                    </div>
+                    <div class="brand-text">
+                        <span class="brand-title">ScholarGraph</span>
+                        <span class="brand-subtitle">Paper Library & Knowledge Graph</span>
+                    </div>
+                </a>
+            </div>
+
+            <nav class="nav-links">
+                <a href="{{ url_for('index') }}" class="nav-item {% if request.path == '/' %}active{% endif %}">
+                    <i class="fa-solid fa-book-bookmark"></i>
+                    <span>Library</span>
+                </a>
+                <a href="{{ url_for('graph_view') }}" class="nav-item {% if request.path == '/graph' %}active{% endif %}">
+                    <i class="fa-solid fa-circle-nodes"></i>
+                    <span>Knowledge Graph</span>
+                </a>
+                <a href="{{ url_for('activity_view') }}" class="nav-item {% if request.path == '/activity' %}active{% endif %}">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                    <span>Activity Log</span>
+                </a>
+            </nav>
+
+            <div class="header-actions">
+                <button class="btn btn-primary" onclick="openUploadModal()">
+                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                    <span>Upload Papers</span>
+                </button>
+                <button class="btn-theme-toggle" id="themeToggleBtn" title="Toggle Dark/Light Mode">
+                    <i class="fa-solid fa-moon"></i>
+                </button>
+                <div class="user-pill">
+                    <i class="fa-solid fa-user-graduate"></i>
+                    <span>Admin Researcher</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main App Container -->
+    <main class="main-content">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Upload Modal -->
+    <div class="modal-overlay" id="uploadModal" style="display: none;">
+        <div class="modal-card modal-lg">
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <i class="fa-solid fa-file-arrow-up text-primary"></i>
+                    <h3>Upload Research Papers</h3>
+                </div>
+                <button class="modal-close" onclick="closeUploadModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="modal-subtitle">Upload PDF research papers to automatically extract metadata, abstracts, authors, references, and generate knowledge graph connections.</p>
+                
+                <div class="dropzone" id="dropzone">
+                    <input type="file" id="fileInput" multiple accept=".pdf" style="display: none;">
+                    <div class="dropzone-inner">
+                        <div class="dropzone-icon">
+                            <i class="fa-solid fa-cloud-arrow-up"></i>
+                        </div>
+                        <h4>Drag and drop PDF papers here</h4>
+                        <p>or <button type="button" class="btn-link" onclick="document.getElementById('fileInput').click()">browse your computer</button></p>
+                        <span class="dropzone-hint">Supports single or batch PDF uploads up to 32MB each</span>
+                    </div>
+                </div>
+
+                <!-- Selected Files List -->
+                <div class="selected-files-container" id="selectedFilesContainer" style="display: none;">
+                    <div class="selected-files-header">
+                        <h5>Selected Papers (<span id="selectedCount">0</span>)</h5>
+                        <button type="button" class="btn-sm btn-subtle text-danger" onclick="clearSelectedFiles()">Clear All</button>
+                    </div>
+                    <ul class="file-list" id="fileList"></ul>
+                </div>
+
+                <!-- Upload Progress & Status -->
+                <div class="upload-progress-container" id="uploadProgress" style="display: none;">
+                    <div class="progress-info">
+                        <span id="uploadStatusText">Extracting metadata and building knowledge links...</span>
+                        <span id="uploadPercentage">0%</span>
+                    </div>
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill" id="progressBarFill"></div>
+                    </div>
+                </div>
+
+                <!-- Upload Results Summary -->
+                <div class="upload-results-container" id="uploadResults" style="display: none;">
+                    <h5>Upload & Extraction Results</h5>
+                    <div class="results-list" id="resultsList"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeUploadModal()">Close</button>
+                <button type="button" class="btn btn-primary" id="startUploadBtn" onclick="submitFiles()" disabled>
+                    <i class="fa-solid fa-bolt"></i> Upload & Extract
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Scripts -->
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/upload.js') }}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

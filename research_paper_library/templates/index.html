@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+
+{% block title %}Library & Dashboard - ScholarGraph{% endblock %}
+
+{% block content %}
+<div class="dashboard-wrapper">
+    <!-- Top Statistics Row -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon stat-icon-blue">
+                <i class="fa-solid fa-file-lines"></i>
+            </div>
+            <div class="stat-content">
+                <span class="stat-label">Total Papers</span>
+                <h2 class="stat-value" id="statPapersCount">0</h2>
+                <span class="stat-sub">Indexed in library</span>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon stat-icon-green">
+                <i class="fa-solid fa-users"></i>
+            </div>
+            <div class="stat-content">
+                <span class="stat-label">Authors</span>
+                <h2 class="stat-value" id="statAuthorsCount">0</h2>
+                <span class="stat-sub">Across publications</span>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon stat-icon-amber">
+                <i class="fa-solid fa-tags"></i>
+            </div>
+            <div class="stat-content">
+                <span class="stat-label">Topics & Tags</span>
+                <h2 class="stat-value" id="statTopicsCount">0</h2>
+                <span class="stat-sub">Auto-extracted categories</span>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon stat-icon-purple">
+                <i class="fa-solid fa-diagram-project"></i>
+            </div>
+            <div class="stat-content">
+                <span class="stat-label">Citation Links</span>
+                <h2 class="stat-value" id="statCitationsCount">0</h2>
+                <span class="stat-sub">Inter-paper connections</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Section: Library Explorer -->
+    <div class="library-container">
+        <!-- Toolbar: Search, Filters & Actions -->
+        <div class="toolbar-card">
+            <div class="toolbar-top">
+                <div class="search-input-wrapper">
+                    <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                    <input type="text" id="searchInput" class="search-input" placeholder="Search papers by title, abstract, author, topic, or DOI...">
+                    <button class="clear-search-btn" id="clearSearchBtn" style="display: none;" onclick="clearSearch()">&times;</button>
+                </div>
+                <div class="quick-actions">
+                    <button class="btn btn-secondary" onclick="loadSamplePapersPrompt()">
+                        <i class="fa-solid fa-flask"></i>
+                        <span>Import Sample Papers</span>
+                    </button>
+                    <button class="btn btn-primary" onclick="openUploadModal()">
+                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                        <span>Upload Paper</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="filters-row">
+                <div class="filter-group">
+                    <label for="topicFilter"><i class="fa-solid fa-tag"></i> Topic:</label>
+                    <select id="topicFilter" class="form-select" onchange="applyFilters()">
+                        <option value="">All Topics</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="authorFilter"><i class="fa-solid fa-user"></i> Author:</label>
+                    <select id="authorFilter" class="form-select" onchange="applyFilters()">
+                        <option value="">All Authors</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="yearFilter"><i class="fa-solid fa-calendar"></i> Year:</label>
+                    <select id="yearFilter" class="form-select" onchange="applyFilters()">
+                        <option value="">All Years</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="statusFilter"><i class="fa-solid fa-shield-halved"></i> Status:</label>
+                    <select id="statusFilter" class="form-select" onchange="applyFilters()">
+                        <option value="">All Statuses</option>
+                        <option value="success">Success</option>
+                        <option value="partial">Partial</option>
+                        <option value="scanned">Scanned / Needs OCR</option>
+                        <option value="failed">Failed</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="sortFilter"><i class="fa-solid fa-arrow-down-wide-short"></i> Sort by:</label>
+                    <select id="sortFilter" class="form-select" onchange="applyFilters()">
+                        <option value="created_at-DESC">Recently Added</option>
+                        <option value="year-DESC">Publication Year (Newest)</option>
+                        <option value="year-ASC">Publication Year (Oldest)</option>
+                        <option value="title-ASC">Title (A-Z)</option>
+                        <option value="file_size-DESC">File Size</option>
+                    </select>
+                </div>
+
+                <div class="filter-group filter-actions">
+                    <button class="btn-subtle" onclick="resetFilters()">
+                        <i class="fa-solid fa-rotate-left"></i> Reset
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Papers List Header / View Counter -->
+        <div class="list-meta-bar">
+            <div class="meta-left">
+                <span class="results-count" id="resultsCount">Loading library...</span>
+            </div>
+            <div class="meta-right">
+                <span class="active-filter-badge" id="activeFilterBadge" style="display: none;"></span>
+            </div>
+        </div>
+
+        <!-- Papers Table / Cards Container -->
+        <div class="papers-list" id="papersContainer">
+            <!-- Dynamic paper items loaded via JS -->
+            <div class="loading-state">
+                <div class="spinner"></div>
+                <p>Loading research papers...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Paper Modal -->
+<div class="modal-overlay" id="editModal" style="display: none;">
+    <div class="modal-card modal-lg">
+        <div class="modal-header">
+            <div class="modal-title-group">
+                <i class="fa-solid fa-pen-to-square text-primary"></i>
+                <h3>Edit Paper Details</h3>
+            </div>
+            <button class="modal-close" onclick="closeEditModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="editPaperForm" onsubmit="savePaperEdits(event)">
+                <input type="hidden" id="editPaperId">
+                <div class="form-group">
+                    <label for="editTitle" class="form-label">Paper Title *</label>
+                    <input type="text" id="editTitle" class="form-input" required>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group col-half">
+                        <label for="editAuthors" class="form-label">Authors (comma separated) *</label>
+                        <input type="text" id="editAuthors" class="form-input" placeholder="Alice Smith, Bob Jones" required>
+                    </div>
+                    <div class="form-group col-half">
+                        <label for="editYear" class="form-label">Publication Year</label>
+                        <input type="number" id="editYear" class="form-input" min="1900" max="2030" placeholder="e.g. 2024">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="editDoi" class="form-label">Digital Object Identifier (DOI)</label>
+                    <input type="text" id="editDoi" class="form-input" placeholder="e.g. 10.1145/3543873.3587321">
+                </div>
+
+                <div class="form-group">
+                    <label for="editAbstract" class="form-label">Abstract</label>
+                    <textarea id="editAbstract" class="form-textarea" rows="5"></textarea>
+                </div>
+
+                <!-- Tags / Topics Management Section -->
+                <div class="tags-management-section">
+                    <label class="form-label">Tags & Topics</label>
+                    <div class="paper-tags-chips" id="editTagsContainer"></div>
+                    <div class="add-tag-inline">
+                        <input type="text" id="newTagInput" class="form-input form-input-sm" placeholder="Add custom tag (e.g. Computer Vision)...">
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="addTagFromEditModal()">
+                            <i class="fa-solid fa-plus"></i> Add Tag
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+            <button type="button" class="btn btn-primary" onclick="submitPaperEdits()">
+                <i class="fa-solid fa-floppy-disk"></i> Save Changes
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/papers.js') }}"></script>
+{% endblock %}

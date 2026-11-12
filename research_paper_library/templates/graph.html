@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block title %}Knowledge Graph Explorer - ScholarGraph{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/graph.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="graph-page-wrapper">
+    <!-- Top Graph Toolbar -->
+    <div class="graph-toolbar">
+        <div class="toolbar-left">
+            <div class="graph-title-group">
+                <i class="fa-solid fa-circle-nodes text-primary"></i>
+                <h2>Interactive Knowledge Graph</h2>
+            </div>
+            
+            <div class="graph-search-box">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" id="graphSearchInput" placeholder="Search paper, author, or topic..." onkeyup="filterGraphSearch(event)">
+                <div class="graph-search-results" id="graphSearchResults" style="display: none;"></div>
+            </div>
+        </div>
+
+        <div class="toolbar-center">
+            <!-- Node Filters -->
+            <div class="filter-toggles">
+                <span class="toggle-group-label">Show Nodes:</span>
+                <label class="chip-toggle active" id="togglePapers">
+                    <input type="checkbox" checked onchange="updateGraphVisibility()">
+                    <span class="chip-dot dot-blue"></span> Papers
+                </label>
+                <label class="chip-toggle active" id="toggleAuthors">
+                    <input type="checkbox" checked onchange="updateGraphVisibility()">
+                    <span class="chip-dot dot-green"></span> Authors
+                </label>
+                <label class="chip-toggle active" id="toggleTopics">
+                    <input type="checkbox" checked onchange="updateGraphVisibility()">
+                    <span class="chip-dot dot-amber"></span> Topics
+                </label>
+            </div>
+
+            <div class="filter-toggles">
+                <span class="toggle-group-label">Edges:</span>
+                <label class="chip-toggle active" id="toggleCitations">
+                    <input type="checkbox" checked onchange="updateGraphVisibility()">
+                    <span class="chip-line line-red"></span> Citations
+                </label>
+                <label class="chip-toggle active" id="toggleCoauthors">
+                    <input type="checkbox" checked onchange="updateGraphVisibility()">
+                    <span class="chip-line line-dashed-green"></span> Co-authors
+                </label>
+            </div>
+        </div>
+
+        <div class="toolbar-right">
+            <button class="btn btn-secondary btn-sm" id="physicsToggleBtn" onclick="togglePhysics()">
+                <i class="fa-solid fa-atom"></i>
+                <span id="physicsStatusText">Freeze Physics</span>
+            </button>
+            <button class="btn btn-secondary btn-sm" onclick="fitGraphView()" title="Fit to Screen">
+                <i class="fa-solid fa-compress"></i>
+            </button>
+            <button class="btn btn-secondary btn-sm" onclick="exportGraphImage()" title="Export PNG Screenshot">
+                <i class="fa-solid fa-camera"></i>
+                <span>Export PNG</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Graph Canvas & Inspector Area -->
+    <div class="graph-canvas-container">
+        <!-- Interactive Vis.js Canvas -->
+        <div id="visNetworkContainer" class="vis-network-canvas">
+            <div class="graph-loading" id="graphLoadingIndicator">
+                <div class="spinner"></div>
+                <p>Generating graph topology and relational links...</p>
+            </div>
+        </div>
+
+        <!-- Floating Legend -->
+        <div class="graph-legend">
+            <h4>Graph Legend</h4>
+            <div class="legend-item">
+                <span class="legend-badge badge-blue"></span>
+                <span>Research Paper</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-badge badge-green"></span>
+                <span>Author</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-badge badge-amber"></span>
+                <span>Topic / Field</span>
+            </div>
+            <div class="legend-divider"></div>
+            <div class="legend-item">
+                <span class="legend-edge-line edge-red"></span>
+                <span>Citation (Paper &rarr; Paper)</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-edge-line edge-gray"></span>
+                <span>Authorship (Paper &rarr; Author)</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-edge-line edge-green-dash"></span>
+                <span>Co-authorship (Author &harr; Author)</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-edge-line edge-yellow"></span>
+                <span>Topic Link (Paper &rarr; Topic)</span>
+            </div>
+        </div>
+
+        <!-- Node Details Slide-Out Inspector Panel -->
+        <div class="node-inspector" id="nodeInspector" style="display: none;">
+            <div class="inspector-header">
+                <div class="inspector-tag-type" id="inspectorTypeBadge">PAPER</div>
+                <button class="inspector-close" onclick="closeInspector()">&times;</button>
+            </div>
+            <div class="inspector-body" id="inspectorBody">
+                <!-- Dynamically populated -->
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Vis.js local bundle -->
+<script src="{{ url_for('static', filename='vendor/vis-network.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/graph.js') }}"></script>
+{% endblock %}
